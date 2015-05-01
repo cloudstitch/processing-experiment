@@ -18,6 +18,10 @@ function processingWidget_Init(ctsTarget, ctsSource, ctsRelation) {
   tryIt();
 }
 
+function Datapoint(d) {
+  this.d = d;
+}
+
 function processingWidget_DependenciesLoaded() {
   return (
     true
@@ -26,15 +30,68 @@ function processingWidget_DependenciesLoaded() {
 
 function processingWidget_ConstructUI(node) {
   var data = processingWidget_GrabData();
-  console.log("Got Data", data);
-  console.log("Constructing widget with settings", data.settings);
-  for (var i = 0; i < data.data.length; i++) {
-    var point = data.data[i];
+
+  // Now that we have the transformations, we can set the
+  // run finction on the datapoint.
+  Datapoint.prototype.run = function() {
     for (var j = 0; j < data.transformations.length; j++) {
       var transformation = data.transformations[j];
-      console.log("Data", point, "Transformation", transformation);
+
+      if (transformation.length > 0) {
+        // There's a command to run.
+        var all = [];
+        if (transformation.length > 1) {
+          var k = 1;
+          while ((k < transformation.length) && (typeof transformation[k] != 'undefined')) {
+            if (isNaN(parseFloat(transformation[k]))) {
+              if (transformation[k].indexOf("col") == -1) {
+                all.push(parseFloat(transformation[k]));
+              } else {
+                all.push(this.d[eval("'" + transformation[k].replace("col(", "").replace(")", "") + "'" )]);
+              }
+            } else {
+              all.push(parseFloat(transformation[k]));
+            }
+            k++;            
+          }
+        }
+        var cmd = transformation[0] + "(" + all.join(",") + ")";
+        eval(cmd);
+      }
+    }
+  };
+
+  // And now we do it.
+  data.smartDatapoints = [];
+  for (var i = 0; i < data.data.length; i++) {
+    data.smartDatapoints.push(new Datapoint(data.data[i]));
+  }
+
+  window.draw = function() {
+    background([40, 40, 40]);
+    for (var i = 0; i < data.smartDatapoints.length; i++) {
+      data.smartDatapoints[i].run();
     }
   }
+  window.setup = function() {
+    createCanvas(1600, 600);
+    frameRate(20);    
+  }
+
+  // Now add processing to the page
+  var p5 = document.createElement('script');
+  p5.setAttribute('src','p5.min.js');
+  document.head.appendChild(p5);
+
+  CTS.Util.$(function($) {
+    w = CTS.Util.$(node).width();
+    h = CTS.Util.$(node).height();
+    setInterval(function() {
+        w = CTS.Util.$(node).width();
+        h = CTS.Util.$(node).height();
+    }, 20);
+  });
+
 }
 
 /*
@@ -51,7 +108,6 @@ function processingWidget_GrabData() {
 
   // transformations: an array of arrays
   var transformations = CTS('processingDatasource|transformations!rows').nodes[0].parentNode.cellFeedNode.getCsv();
-
   return {
     data: data,
     settings: settings,
