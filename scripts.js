@@ -32,15 +32,17 @@ function processingWidget_ConstructUI(node) {
   var data = processingWidget_GrabData();
 
   function parseVal(ctx, val) {
-    if (isNaN(parseFloat(val))) {
-      if (val.indexOf("col") == -1) {
-        return parseFloat(val);
-      } else {
-        return ctx[eval("'" + val.replace("col(", "").replace(")", "") + "'" )];
-      }
-    } else {
-      val = parseFloat(val);
+    alert(val + '' + parseFloat(val) + '' + isNaN(parseFloat(val)))
+    var floatAttempt = parseFloat(val);
+    
+    // 42
+    if (! isNaN(floatAttempt)) return floatAttempt;
+
+    // col(Property)
+    if (val.indexOf("col") > -1) {
+      return ctx[eval("'" + val.replace("col(", "").replace(")", "") + "'" )];
     }
+
     return val;
   }
 
@@ -60,6 +62,9 @@ function processingWidget_ConstructUI(node) {
             k++;            
           }
         }
+        // console.log(all);  
+        // alert(all);
+        // eval(transformation[0]).apply(this, all);
         var cmd = transformation[0] + "(" + all.join(",") + ")";
         eval(cmd);
       }
