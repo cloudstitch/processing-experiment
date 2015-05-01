@@ -31,6 +31,19 @@ function processingWidget_DependenciesLoaded() {
 function processingWidget_ConstructUI(node) {
   var data = processingWidget_GrabData();
 
+  function parseVal(ctx, val) {
+    if (isNaN(parseFloat(val))) {
+      if (val.indexOf("col") == -1) {
+        return parseFloat(val);
+      } else {
+        return ctx[eval("'" + val.replace("col(", "").replace(")", "") + "'" )];
+      }
+    } else {
+      val = parseFloat(val);
+    }
+    return val;
+  }
+
   // Now that we have the transformations, we can set the
   // run finction on the datapoint.
   Datapoint.prototype.run = function() {
@@ -43,15 +56,7 @@ function processingWidget_ConstructUI(node) {
         if (transformation.length > 1) {
           var k = 1;
           while ((k < transformation.length) && (typeof transformation[k] != 'undefined')) {
-            if (isNaN(parseFloat(transformation[k]))) {
-              if (transformation[k].indexOf("col") == -1) {
-                all.push(parseFloat(transformation[k]));
-              } else {
-                all.push(this.d[eval("'" + transformation[k].replace("col(", "").replace(")", "") + "'" )]);
-              }
-            } else {
-              all.push(parseFloat(transformation[k]));
-            }
+            all.push(parseVal(this.d, transformation[k]));
             k++;            
           }
         }
@@ -74,8 +79,8 @@ function processingWidget_ConstructUI(node) {
     }
   }
   window.setup = function() {
-    createCanvas(1600, 600);
-    frameRate(20);    
+    createCanvas(parseInt(data.settings.Width), parseInt(data.settings.Height));
+    frameRate(parseInt(data.settings.frameRate));    
   }
 
   // Now add processing to the page
@@ -104,7 +109,7 @@ function processingWidget_GrabData() {
   var data = CTS('processingDatasource|data!rows').nodes[0].toJson();
 
   // settings: a single object
-  var settings = CTS('processingDatasource|data!rows').nodes[0].toJson()[0];
+  var settings = CTS('processingDatasource|settings!rows').nodes[0].toJson()[0];
 
   // transformations: an array of arrays
   var transformations = CTS('processingDatasource|transformations!rows').nodes[0].parentNode.cellFeedNode.getCsv();
